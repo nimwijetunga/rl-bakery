@@ -7,7 +7,7 @@ from rl_bakery.data_manager.data_manager import DATANAME
 from rl_bakery.engine.base_engine import BaseEngine
 from rl_bakery.operation.base_operation import start_tensorboard_writer, close_tensorboard_writer
 
-from tf_agents.agents.dqn import dqn_agent
+from tf_agents.agents.dqn.dqn_agent import DqnAgent
 from tf_agents.environments import suite_gym, tf_py_environment
 from tf_agents.networks import q_network
 from tf_agents.trajectories import time_step as ts
@@ -16,10 +16,11 @@ from tf_agents.utils import common
 import logging
 import tensorflow as tf
 import time
+import gin, gin.tf
 
 logger = logging.getLogger(__name__)
 
-
+@gin.configurable
 class ExampleCartPole(object):
 
     def __init__(self,
@@ -45,6 +46,11 @@ class ExampleCartPole(object):
                  eps_final=0.1,
                  eps_steps=10000,
                  initial_collect_steps=3000,
+                 global_step=None,
+                 td_errors_loss_fn=None,
+                 optimizer=None,
+                 optimizer_kwargs={},
+                 q_net_kwargs={},
                  tb_path=None):
 
         # store configs used during the training run
@@ -81,23 +87,24 @@ class ExampleCartPole(object):
         def init_agent():
             """ a DQN agent is set by default in the application"""
             # get the global step
-            global_step = tf.compat.v1.train.get_or_create_global_step()
+            import pdb; pdb.set_trace()
+            gs = global_step()
 
             # TODO: update this to get the optimizer from tensorflow 2.0 if possible
-            optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
+            opt = optimizer(**optimizer_kwargs)
 
             q_net = q_network.QNetwork(self._rl_app.observation_spec, self._rl_app.action_spec,
-                                       fc_layer_params=fc_layer_params)
+                                       **q_net_kwargs)
             time_step_spec = ts.time_step_spec(self._rl_app.observation_spec)
-            tf_agent = dqn_agent.DqnAgent(
+            tf_agent = DqnAgent(
                 time_step_spec,
                 self._rl_app.action_spec,
                 q_network=q_net,
-                optimizer=optimizer,
+                optimizer=opt,
                 epsilon_greedy=eps_final,
                 gradient_clipping=gradient_clipping,
-                td_errors_loss_fn=common.element_wise_squared_loss,
-                train_step_counter=global_step,
+                td_errors_loss_fn=td_errors_loss_fn,
+                train_step_counter=gs,
                 debug_summaries=True,
                 summarize_grads_and_vars=True
             )
@@ -170,6 +177,10 @@ class ExampleCartPole(object):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    example_pipeline = ExampleCartPole()
-    example_pipeline.run()
+    # gin.external_configurable(tf.compat.v1.train.get_or_create_global_step)
+    gin.external_configurable(tf.compat.v1.train.get_or_create_global_step, module='tf.compat.v1.train')
+    gin.external_configurable(common.element_wise_squared_loss, module='common')
+    gin.external_configurable(tf.compat.v1.train.AdamOptimizer, module='tf.compat.v1.train')
+    gin.parse_config_file('config.gin')
+    example = ExampleCartPole()
+    example.run()
