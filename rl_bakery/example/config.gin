@@ -1,0 +1,28 @@
+ExampleCartPole.fc_layer_params = (100, )
+ExampleCartPole.learning_rate = 0.01
+ExampleCartPole.agent_discount = 0.99
+ExampleCartPole.mini_batch_size = 64
+ExampleCartPole.num_iterations = 10000
+ExampleCartPole.trajectory_training_window = 100
+ExampleCartPole.log_interval = 200
+ExampleCartPole.envs_num = 10
+ExampleCartPole.runs_num = 10
+ExampleCartPole.steps_num_per_run = 1000
+ExampleCartPole.eval_interval = 1
+ExampleCartPole.num_eval_episodes = 100
+ExampleCartPole.eps_start = 1.0
+ExampleCartPole.eps_final = 0.1
+ExampleCartPole.eps_steps = 10000
+ExampleCartPole.initial_collect_steps = 3000
+ExampleCartPole.tb_path = "/tmp/it/works"
+
+# agent specific config
+ExampleCartPole.global_step=@tf.compat.v1.train.get_or_create_global_step
+ExampleCartPole.td_errors_loss_fn=@common.element_wise_squared_loss
+ExampleCartPole.optimizer=@tf.compat.v1.train.AdamOptimizer
+ExampleCartPole.optimizer_kwargs={
+    'learning_rate': 0.01
+}
+ExampleCartPole.q_net_kwargs={
+    'fc_layer_params': (100,)
+}
